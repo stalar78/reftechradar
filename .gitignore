@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -15,6 +15,7 @@ env/
 
 # Testing / coverage
 .pytest_cache/
+.pytest_tmp/
 .coverage
 .coverage.*
 htmlcov/
