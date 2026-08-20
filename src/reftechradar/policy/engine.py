@@ -29,17 +29,16 @@ def evaluate_policy(vacancy: Vacancy) -> PolicyResult:
 
 
 def _seniority_rule(vacancy: Vacancy, text: str) -> RuleEvidence | None:
-    senior_terms = ("senior", "lead", "principal", "staff engineer")
-    evidence = tuple(term for term in senior_terms if term in text)
+    title = vacancy.title.lower()
+    patterns = {
+        "Senior": r"\bsenior\b",
+        "Lead": r"\blead\b",
+        "Principal": r"\bprincipal\b",
+        "Staff Engineer": r"\bstaff\s+engineer\b",
+    }
+    evidence = tuple(label for label, pattern in patterns.items() if re.search(pattern, title))
     if not evidence:
         return None
-    if _has_exception_signals(text):
-        return RuleEvidence(
-            rule_id="seniority.review_with_exception",
-            outcome=PolicyOutcome.REVIEW_REQUIRED,
-            evidence=evidence + _exception_evidence(text),
-            reason="Seniority signal is present, but portfolio/AI-first exception signals require review.",
-        )
     return RuleEvidence(
         rule_id="seniority.clear_mismatch",
         outcome=PolicyOutcome.REJECT,
@@ -74,14 +73,6 @@ def _experience_rule(vacancy: Vacancy, text: str) -> RuleEvidence | None:
                 reason="Nominal 3 years is preserved for review because strong practical/AI-first signals exist.",
             )
         return None
-    if _has_exception_signals(text):
-        return RuleEvidence(
-            rule_id="experience.strict_mismatch_with_exception",
-            outcome=PolicyOutcome.PENALTY,
-            evidence=(f"{strict_years}+ years",) + _exception_evidence(text),
-            reason="Strict experience requirement is softened by portfolio/practical exception signals.",
-            severity="medium",
-        )
     return RuleEvidence(
         rule_id="experience.strict_mismatch",
         outcome=PolicyOutcome.REJECT,
@@ -92,7 +83,13 @@ def _experience_rule(vacancy: Vacancy, text: str) -> RuleEvidence | None:
 
 
 def _years_required(text: str) -> int:
-    matches = re.findall(r"(\d+)\s*\+?\s+years?", text)
+    patterns = (
+        r"(\d+)\s*\+?\s+years?\s+(?:of\s+)?(?:professional\s+)?(?:development|developer|engineering|backend|frontend|commercial)\b",
+        r"(?:require(?:d|s)?|must\s+have|need(?:s|ed)?)\s+(\d+)\s*\+?\s+years?",
+    )
+    matches: list[str] = []
+    for pattern in patterns:
+        matches.extend(re.findall(pattern, text))
     return max((int(match) for match in matches), default=0)
 
 
@@ -117,4 +114,3 @@ def _exception_evidence(text: str) -> tuple[str, ...]:
 
 def _text(vacancy: Vacancy) -> str:
     return f"{vacancy.title} {vacancy.company} {vacancy.description} {vacancy.location}".lower()
-

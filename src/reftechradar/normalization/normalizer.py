@@ -34,7 +34,7 @@ def _normalize_url(url: str) -> str:
     scheme = parts.scheme.lower() or "https"
     netloc = parts.netloc.lower()
     path = parts.path.rstrip("/")
-    return urlunsplit((scheme, netloc, path, "", ""))
+    return urlunsplit((scheme, netloc, path, parts.query, ""))
 
 
 def _normalize_remote(value: str | bool | None, location: str, description: str) -> bool:
